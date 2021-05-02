@@ -1,0 +1,19 @@
+﻿<Project Sdk="Microsoft.NET.Sdk.Web">
+
+	<PropertyGroup>
+		<TargetFramework>netcoreapp3.1</TargetFramework>
+		<RootNamespace>IP_Domain_API</RootNamespace>
+		<UserSecretsId>1242d1d2-de4c-49af-a61f-bfdd003348b4</UserSecretsId>
+		<DockerDefaultTargetOS>Linux</DockerDefaultTargetOS>
+		<DockerfileRunArguments>-p 5000:6000</DockerfileRunArguments>
+		<DockerComposeProjectPath>..\docker-compose.dcproj</DockerComposeProjectPath>
+	</PropertyGroup>
+
+	<ItemGroup>
+		<PackageReference Include="Microsoft.VisualStudio.Azure.Containers.Tools.Targets" Version="1.10.13" />
+		<PackageReference Include="Swashbuckle" Version="5.6.0" />
+		<PackageReference Include="Swashbuckle.AspNetCore" Version="6.1.4" />
+	</ItemGroup>
+
+
+</Project>

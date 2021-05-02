@@ -1,0 +1,9 @@
+version: '3.4'
+
+services:
+  ip-domain-api:
+  
+    image: ${DOCKER_REGISTRY-}ipdomainapi
+    build:
+      context: .
+      dockerfile: IP-Domain-API/Dockerfile
