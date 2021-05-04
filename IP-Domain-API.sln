@@ -7,6 +7,8 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "IP-Domain-API", "IP-Domain-
 EndProject
 Project("{E53339B2-1760-4266-BCC7-CA923CBCF16C}") = "docker-compose", "docker-compose.dcproj", "{ECAB63C9-565F-4C11-B247-5F3E42ED9B1D}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "IP-Domain-API.Tests", "IP-Domain-API.Tests\IP-Domain-API.Tests.csproj", "{ED3584BB-EA39-49BA-A9C3-7FE183E49A58}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -21,6 +23,10 @@ Global
 		{ECAB63C9-565F-4C11-B247-5F3E42ED9B1D}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{ECAB63C9-565F-4C11-B247-5F3E42ED9B1D}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{ECAB63C9-565F-4C11-B247-5F3E42ED9B1D}.Release|Any CPU.Build.0 = Release|Any CPU
+		{ED3584BB-EA39-49BA-A9C3-7FE183E49A58}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{ED3584BB-EA39-49BA-A9C3-7FE183E49A58}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{ED3584BB-EA39-49BA-A9C3-7FE183E49A58}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{ED3584BB-EA39-49BA-A9C3-7FE183E49A58}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

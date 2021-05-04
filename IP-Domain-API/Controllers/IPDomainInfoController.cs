@@ -9,6 +9,7 @@ using System.Linq;
 using System.Net;
 using System.Net.Http;
 using System.Net.NetworkInformation;
+using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using System.Web.Http;
 
@@ -30,23 +31,30 @@ namespace IP_Domain_API.Controllers
 
         private string[] acceptedServices = { "RDAP", "GeoLocation", "Ping", "ReverseDns", "IsDomainAvailable" };
 
-        private readonly ILogger<IPDomainInfoController> _logger;
-
-        public IPDomainInfoController(ILogger<IPDomainInfoController> logger)
+        public IPDomainInfoController()
         {
-            _logger = logger;
         }
 
         [Microsoft.AspNetCore.Mvc.HttpGet("{nameOrAddress}")]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
         public async Task<ActionResult<IEnumerable<IPDomainInfo>>> GetAsync(string nameOrAddress, [FromUri] string serviceList = "RDAP,GeoLocation,Ping,ReverseDns,IsDomainAvailable")
         {
+            IPAddress tempForParsing;
+            //Domain regex used to check if it follow google.com format etc.
+            Regex rgx = new Regex("^(?!-)[A-Za-z0-9-]+([\\-\\.]{1}[a-z0-9]+)*\\.[A-Za-z]{2,6}$");
+            //Return 400 if the name or address isn't the correct format
+            if (!IPAddress.TryParse(nameOrAddress, out tempForParsing) && !rgx.IsMatch(nameOrAddress))
+            {
+                return BadRequest("Name or address is the incorrect format " + nameOrAddress);
+            }
+
             string[] serviceListArray = serviceList.Split(',');
             Task<IPDomainInfo>[] tasks = new Task<IPDomainInfo>[serviceListArray.Length];
 
             int index = 0;
             foreach (string serviceName in serviceListArray)
             {
+                //Return 400 when service is not a valid option
                 if (!acceptedServices.Contains(serviceName))
                 {
                     return BadRequest("Service name " + serviceName + " is not a valid option");
