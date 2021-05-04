@@ -1,5 +1,8 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using IP_Domain_API.Models;
+using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
+using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -15,12 +18,15 @@ namespace IP_Domain_API.Controllers
     [Route("api/[controller]")]
     public class IPDomainInfoController : ControllerBase
     {
-        public const String IP_STACK_API_KEY = "f3cadd5cee330e0e895e53dc37faedc9";
-        public const String RDAP_DOT_COM = "https://rdap.verisign.com/com/v1/domain/";
-        public const String RDAP_DOT_IP = "https://rdap.arin.net/registry/ip/";
-        public const String RDAP_DOT_ORG = "https://rdap.publicinterestregistry.net/rdap/org/domain/";
+        private const string IP_STACK_API_KEY = "f3cadd5cee330e0e895e53dc37faedc9";
+
+        private const string RDAP_DOT_COM = "https://rdap.verisign.com/com/v1/domain/";
+        private const string RDAP_DOT_IP = "https://rdap.arin.net/registry/ip/";
+        private const string RDAP_DOT_ORG = "https://rdap.publicinterestregistry.net/rdap/org/domain/";
 
         static readonly HttpClient client = new HttpClient();
+
+        private string[] acceptedServices = { "RDAP", "GeoLocation", "Ping", "ReverseDns" };
 
         private readonly ILogger<IPDomainInfoController> _logger;
 
@@ -30,95 +36,118 @@ namespace IP_Domain_API.Controllers
         }
 
         [Microsoft.AspNetCore.Mvc.HttpGet("{nameOrAddress}")]
-        public async Task<IEnumerable<string>> GetAsync(String nameOrAddress, [FromUri] String serviceList = "test,test")
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        public async Task<ActionResult<IEnumerable<IPDomainInfo>>> GetAsync(string nameOrAddress, [FromUri] string serviceList = "RDAP,GeoLocation,Ping,ReverseDns")
         {
-            foreach (string serviceName in serviceList.Split(','))
+            string[] serviceListArray = serviceList.Split(',');
+            Task<IPDomainInfo>[] tasks = new Task<IPDomainInfo>[serviceListArray.Length];
+
+            int index = 0;
+            foreach (string serviceName in serviceListArray)
             {
-
+                if (!acceptedServices.Contains(serviceName))
+                {
+                    return BadRequest("Service name " + serviceName + " is not a valid option");
+                }
+                switch (serviceName)
+                {
+                    case "RDAP":
+                        tasks[index] = RDAP(nameOrAddress);
+                        break;
+                    case "GeoLocation":
+                        tasks[index] = GeoLocation(nameOrAddress);
+                        break;
+                    case "Ping":
+                        tasks[index] = Ping(nameOrAddress);
+                        break;
+                    case "ReverseDns":
+                        tasks[index] = ReverseDns(nameOrAddress);
+                        break;
+                }
+                index++;
             }
-            Task<string>[] tasks = new Task<string>[4];
 
-            tasks[0] = RDAP(nameOrAddress);
-            tasks[1] = GeoLocation(nameOrAddress);
-            tasks[2] = Ping(nameOrAddress);
-            tasks[3] = ReverseDns(nameOrAddress);
-
-            String[] results = await Task.WhenAll(tasks);
-            Array.ForEach(results, Console.WriteLine);
+            IPDomainInfo[] results = await Task.WhenAll(tasks);
 
             return results;
         }
 
-        private async Task<string> ReverseDns(String nameOrAddress)
+        private async Task<IPDomainInfo> ReverseDns(string nameOrAddress)
         {
+            IPDomainInfo reverseDnsResult = new IPDomainInfo();
+            reverseDnsResult.ServiceName = "ReverseDns";
             try
             {
                 IPHostEntry hostEntry = await Dns.GetHostEntryAsync(nameOrAddress);
-                return hostEntry.HostName;
+                var hostInfo = new { hostName = hostEntry.HostName.ToString() };
+
+                reverseDnsResult.Result = JsonConvert.SerializeObject(hostInfo);
+                return reverseDnsResult;
             }
             catch (Exception e)
             {
-                return e.Message;
+                reverseDnsResult.Result = JsonConvert.SerializeObject(e);
+                return reverseDnsResult;
             }
 
         }
-        private async Task<string> Ping(String nameOrAddress)
+        private async Task<IPDomainInfo> Ping(string nameOrAddress)
         {
-            Ping ping = new Ping();
+            IPDomainInfo pingResult = new IPDomainInfo();
+            pingResult.ServiceName = "Ping";
             try
             {
-                object tempUserToken = new object();
+
+                Ping ping = new Ping();
                 PingReply pingReply = await ping.SendPingAsync(nameOrAddress);
-                return pingReply.Status.ToString() + " " + pingReply.RoundtripTime.ToString() + "ms";
+                var pingInfo = new { status = pingReply.Status.ToString(), roundTripTime = pingReply.RoundtripTime + "ms" };
+                pingResult.Result = JsonConvert.SerializeObject(pingInfo);
+                return pingResult;
             }
             catch (Exception e)
             {
-                return e.Message;
+                pingResult.Result = JsonConvert.SerializeObject(e);
+                return pingResult;
             }
         }
 
-        private async Task<string> GeoLocation(String nameOrAddress)
+        private async Task<IPDomainInfo> GeoLocation(string nameOrAddress)
         {
-            try
-            {
-                HttpResponseMessage response = await client.GetAsync("http://api.ipstack.com/" + nameOrAddress + "?access_key=" + IP_STACK_API_KEY);
-                response.EnsureSuccessStatusCode();
-                return await response.Content.ReadAsStringAsync();
-            }
-            catch (HttpRequestException e)
-            {
-                return e.Message;
-            }
+            return await callExternalAPI("http://api.ipstack.com/" + nameOrAddress + "?access_key=" + IP_STACK_API_KEY, "GeoLocation");
         }
 
-        private async Task<string> RDAP(String nameOrAddress)
+        private async Task<IPDomainInfo> RDAP(string nameOrAddress)
         {
             IPAddress tempForParsing;
             if (IPAddress.TryParse(nameOrAddress, out tempForParsing))
             {
-                try
-                {
-                    HttpResponseMessage response = await client.GetAsync(RDAP_DOT_IP + nameOrAddress);
-                    response.EnsureSuccessStatusCode();
-                    return await response.Content.ReadAsStringAsync();
-                }
-                catch (HttpRequestException e)
-                {
-                    return e.Message;
-                }
+                return await callExternalAPI(RDAP_DOT_IP + nameOrAddress, "RDAP");
+            }
+            else if (nameOrAddress.Contains(".com"))
+            {
+                return await callExternalAPI(RDAP_DOT_COM + nameOrAddress, "RDAP");
             }
             else
             {
-                try
-                {
-                    HttpResponseMessage response = await client.GetAsync(RDAP_DOT_COM + nameOrAddress);
-                    response.EnsureSuccessStatusCode();
-                    return await response.Content.ReadAsStringAsync();
-                }
-                catch (HttpRequestException e)
-                {
-                    return e.Message;
-                }
+                return await callExternalAPI(RDAP_DOT_ORG + nameOrAddress, "RDAP");
+            }
+        }
+
+        private static async Task<IPDomainInfo> callExternalAPI(string url, string serviceName)
+        {
+            IPDomainInfo info = new IPDomainInfo();
+            info.ServiceName = serviceName;
+            try
+            {
+                HttpResponseMessage response = await client.GetAsync(url);
+                response.EnsureSuccessStatusCode();
+                info.Result = await response.Content.ReadAsStringAsync();
+                return info;
+            }
+            catch (HttpRequestException e)
+            {
+                info.Result = JsonConvert.SerializeObject(e);
+                return info;
             }
         }
     }
