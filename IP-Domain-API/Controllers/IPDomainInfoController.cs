@@ -19,14 +19,16 @@ namespace IP_Domain_API.Controllers
     public class IPDomainInfoController : ControllerBase
     {
         private const string IP_STACK_API_KEY = "f3cadd5cee330e0e895e53dc37faedc9";
+        private const string WHO_IS_API_KEY = "at_yeiqw8Xfe0soIx5WSXYx0ZkMQP10S";
 
         private const string RDAP_DOT_COM = "https://rdap.verisign.com/com/v1/domain/";
+        private const string RDAP_DOT_NET = "https://rdap.verisign.com/net/v1/domain/";
         private const string RDAP_DOT_IP = "https://rdap.arin.net/registry/ip/";
         private const string RDAP_DOT_ORG = "https://rdap.publicinterestregistry.net/rdap/org/domain/";
 
         static readonly HttpClient client = new HttpClient();
 
-        private string[] acceptedServices = { "RDAP", "GeoLocation", "Ping", "ReverseDns" };
+        private string[] acceptedServices = { "RDAP", "GeoLocation", "Ping", "ReverseDns", "IsDomainAvailable" };
 
         private readonly ILogger<IPDomainInfoController> _logger;
 
@@ -37,7 +39,7 @@ namespace IP_Domain_API.Controllers
 
         [Microsoft.AspNetCore.Mvc.HttpGet("{nameOrAddress}")]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
-        public async Task<ActionResult<IEnumerable<IPDomainInfo>>> GetAsync(string nameOrAddress, [FromUri] string serviceList = "RDAP,GeoLocation,Ping,ReverseDns")
+        public async Task<ActionResult<IEnumerable<IPDomainInfo>>> GetAsync(string nameOrAddress, [FromUri] string serviceList = "RDAP,GeoLocation,Ping,ReverseDns,IsDomainAvailable")
         {
             string[] serviceListArray = serviceList.Split(',');
             Task<IPDomainInfo>[] tasks = new Task<IPDomainInfo>[serviceListArray.Length];
@@ -63,6 +65,9 @@ namespace IP_Domain_API.Controllers
                     case "ReverseDns":
                         tasks[index] = ReverseDns(nameOrAddress);
                         break;
+                    case "IsDomainAvailable":
+                        tasks[index] = IsDomainAvailable(nameOrAddress);
+                        break;
                 }
                 index++;
             }
@@ -74,40 +79,59 @@ namespace IP_Domain_API.Controllers
 
         private async Task<IPDomainInfo> ReverseDns(string nameOrAddress)
         {
-            IPDomainInfo reverseDnsResult = new IPDomainInfo();
-            reverseDnsResult.ServiceName = "ReverseDns";
-            try
+            IPAddress tempForParsing;
+            if (IPAddress.TryParse(nameOrAddress, out tempForParsing))
             {
-                IPHostEntry hostEntry = await Dns.GetHostEntryAsync(nameOrAddress);
-                var hostInfo = new { hostName = hostEntry.HostName.ToString() };
+                return await callExternalAPI("https://reverse-ip.whoisxmlapi.com/api/v1?apiKey=" + WHO_IS_API_KEY + "&ip=" + nameOrAddress, "ReverseDns");
+            }
+            else
+            {
+                IPDomainInfo reverseDnsInfo = new IPDomainInfo();
+                reverseDnsInfo.ServiceName = "ReverseDns";
+                try
+                {
+                    IPHostEntry hostEntry = await Dns.GetHostEntryAsync(nameOrAddress);
+                    var hostInfo = new { hostName = hostEntry.HostName.ToString() };
 
-                reverseDnsResult.Result = JsonConvert.SerializeObject(hostInfo);
-                return reverseDnsResult;
+                    reverseDnsInfo.Result = JsonConvert.SerializeObject(hostInfo);
+                    return reverseDnsInfo;
+                }
+                catch (Exception e)
+                {
+                    reverseDnsInfo.Result = JsonConvert.SerializeObject(e);
+                    return reverseDnsInfo;
+                }
             }
-            catch (Exception e)
-            {
-                reverseDnsResult.Result = JsonConvert.SerializeObject(e);
-                return reverseDnsResult;
-            }
+
 
         }
         private async Task<IPDomainInfo> Ping(string nameOrAddress)
         {
-            IPDomainInfo pingResult = new IPDomainInfo();
-            pingResult.ServiceName = "Ping";
+            IPDomainInfo pingInfo = new IPDomainInfo();
+            pingInfo.ServiceName = "Ping";
             try
             {
-
                 Ping ping = new Ping();
-                PingReply pingReply = await ping.SendPingAsync(nameOrAddress);
-                var pingInfo = new { status = pingReply.Status.ToString(), roundTripTime = pingReply.RoundtripTime + "ms" };
-                pingResult.Result = JsonConvert.SerializeObject(pingInfo);
-                return pingResult;
+                PingReply pingReply;
+
+                IPAddress tempForParsing;
+                if (IPAddress.TryParse(nameOrAddress, out tempForParsing))
+                {
+                    pingReply = await ping.SendPingAsync(tempForParsing);
+                }
+                else
+                {
+                    pingReply = await ping.SendPingAsync(nameOrAddress);
+                }
+
+                var pingReplyInfo = new { status = pingReply.Status.ToString(), roundTripTime = pingReply.RoundtripTime + "ms" };
+                pingInfo.Result = JsonConvert.SerializeObject(pingReplyInfo);
+                return pingInfo;
             }
             catch (Exception e)
             {
-                pingResult.Result = JsonConvert.SerializeObject(e);
-                return pingResult;
+                pingInfo.Result = JsonConvert.SerializeObject(e);
+                return pingInfo;
             }
         }
 
@@ -127,9 +151,64 @@ namespace IP_Domain_API.Controllers
             {
                 return await callExternalAPI(RDAP_DOT_COM + nameOrAddress, "RDAP");
             }
+            else if (nameOrAddress.Contains(".net"))
+            {
+                return await callExternalAPI(RDAP_DOT_NET + nameOrAddress, "RDAP");
+            }
             else
             {
                 return await callExternalAPI(RDAP_DOT_ORG + nameOrAddress, "RDAP");
+            }
+        }
+
+        private async Task<IPDomainInfo> IsDomainAvailable(string nameOrAddress)
+        {
+            IPAddress tempForParsing;
+            IPDomainInfo info = new IPDomainInfo();
+            if (IPAddress.TryParse(nameOrAddress, out tempForParsing))
+            {
+                info.ServiceName = "IsDomainAvailable";
+                info.Result = "{\"Error\":\"Domain availability only works when passing in a domain\"}";
+                return info;
+            }
+            else if (nameOrAddress.Contains(".com"))
+            {
+                info = await callExternalAPI(RDAP_DOT_COM + nameOrAddress, "IsDomainAvailable");
+                if (info.Result.Contains("404"))
+                {
+                    info.Result = "true";
+                }
+                else
+                {
+                    info.Result = "false";
+                }
+                return info;
+            }
+            else if (nameOrAddress.Contains(".net"))
+            {
+                info = await callExternalAPI(RDAP_DOT_NET + nameOrAddress, "IsDomainAvailable");
+                if (info.Result.Contains("404"))
+                {
+                    info.Result = "true";
+                }
+                else
+                {
+                    info.Result = "false";
+                }
+                return info;
+            }
+            else
+            {
+                info = await callExternalAPI(RDAP_DOT_ORG + nameOrAddress, "IsDomainAvailable");
+                if (info.Result.Contains("404"))
+                {
+                    info.Result = "true";
+                }
+                else
+                {
+                    info.Result = "false";
+                }
+                return info;
             }
         }
 
