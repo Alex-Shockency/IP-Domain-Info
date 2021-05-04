@@ -3,6 +3,7 @@
   <span class="example-spacer"></span>
 </mat-toolbar>
 <mat-card class="card-margin">
+ 
   <form class="example-form">
     <mat-form-field appearance="fill">
       <mat-label>Services</mat-label>
@@ -49,6 +50,7 @@
     </mat-form-field>
 
   </form>
+  <mat-spinner *ngIf="loading"></mat-spinner>
   <ngx-json-viewer *ngIf="hostOrAddressInfo" [json]="hostOrAddressInfo" [expanded]="false"></ngx-json-viewer>
   <mat-card-actions align="end">
     <button [disabled]="!ipFormControl.valid && !domainFormControl.valid" mat-raised-button color="primary"

@@ -35,9 +35,10 @@ export class AppComponent {
   title = 'IP-Domain';
   selectedType = '';
   hostOrAddressInfo: IPDomainInfo[] = [];
+  loading = false;
 
   typeList: string[] = ['IP Address', 'Domain'];
-  serviceList: string[] = ['RDAP', 'GeoLocation', 'Ping', 'ReverseDns'];
+  serviceList: string[] = ['RDAP', 'GeoLocation', 'Ping', 'ReverseDns', 'IsDomainAvailable'];
 
   ipFormControl = new FormControl('', [
     Validators.required,
@@ -49,26 +50,31 @@ export class AppComponent {
     Validators.pattern(domainPattern),
   ]);
 
-  serviceFormControl = new FormControl(['RDAP', 'GeoLocation', 'Ping', 'ReverseDns']);
+  serviceFormControl = new FormControl(this.serviceList);
 
   matcher = new MyErrorStateMatcher();
 
   submit(){
     let tempInfoArray:IPDomainInfo[] = [];
+    this.hostOrAddressInfo = [];
    if(this.selectedType === 'Domain'){
+    this.loading = true;
     this.ipDomainInfoService.getIPDomainInfo(this.domainFormControl.value, this.serviceFormControl.value).subscribe(responses => {
       Object.values(responses).forEach((response:IPDomainInfo) => {
         response.result = JSON.parse(response.result);
         tempInfoArray.push(response);
       });
+      this.loading = false;
       this.hostOrAddressInfo = tempInfoArray;
     });
-  
    } else{
-    this.ipDomainInfoService.getIPDomainInfo(this.ipFormControl.value,this.serviceFormControl.value).subscribe(results => {
-      Object.values(results).forEach(result => {
-        tempInfoArray.push(result);
+    this.loading = true;
+    this.ipDomainInfoService.getIPDomainInfo(this.ipFormControl.value, this.serviceFormControl.value).subscribe(responses => {
+      Object.values(responses).forEach((response:IPDomainInfo) => {
+        response.result = JSON.parse(response.result);
+        tempInfoArray.push(response);
       });
+      this.loading = false;
       this.hostOrAddressInfo = tempInfoArray;
     });
    }
