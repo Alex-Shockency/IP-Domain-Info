@@ -49,6 +49,7 @@
     </mat-form-field>
 
   </form>
+  <ngx-json-viewer *ngIf="hostOrAddressInfo" [json]="hostOrAddressInfo" [expanded]="false"></ngx-json-viewer>
   <mat-card-actions align="end">
     <button [disabled]="!ipFormControl.valid && !domainFormControl.valid" mat-raised-button color="primary"
       type="submit" (click)="submit()">Submit</button>

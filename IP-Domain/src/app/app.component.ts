@@ -1,3 +1,4 @@
+import { stringify } from '@angular/compiler/src/util';
 import { Component } from '@angular/core';
 import { FormControl, FormGroupDirective, NgForm, Validators } from '@angular/forms';
 import { ErrorStateMatcher } from '@angular/material/core';
@@ -8,11 +9,18 @@ const ipPattern =
 
 const domainPattern = "^(?!-)[A-Za-z0-9-]+([\\-\\.]{1}[a-z0-9]+)*\\.[A-Za-z]{2,6}$";
 
+
+
 export class MyErrorStateMatcher implements ErrorStateMatcher {
   isErrorState(control: FormControl | null, form: FormGroupDirective | NgForm | null): boolean {
     const isSubmitted = form && form.submitted;
     return !!(control && control.invalid && (control.dirty || control.touched || isSubmitted));
   }
+}
+
+export interface IPDomainInfo {
+  serviceName: string
+  result: any
 }
 
 @Component({
@@ -26,6 +34,7 @@ export class AppComponent {
 
   title = 'IP-Domain';
   selectedType = '';
+  hostOrAddressInfo: IPDomainInfo[] = [];
 
   typeList: string[] = ['IP Address', 'Domain'];
   serviceList: string[] = ['RDAP', 'GeoLocation', 'Ping', 'ReverseDns'];
@@ -45,13 +54,22 @@ export class AppComponent {
   matcher = new MyErrorStateMatcher();
 
   submit(){
+    let tempInfoArray:IPDomainInfo[] = [];
    if(this.selectedType === 'Domain'){
-    this.ipDomainInfoService.getIPDomainInfo(this.domainFormControl.value, this.serviceFormControl.value).subscribe(result => {
-      console.log(result)
+    this.ipDomainInfoService.getIPDomainInfo(this.domainFormControl.value, this.serviceFormControl.value).subscribe(responses => {
+      Object.values(responses).forEach((response:IPDomainInfo) => {
+        response.result = JSON.parse(response.result);
+        tempInfoArray.push(response);
+      });
+      this.hostOrAddressInfo = tempInfoArray;
     });
+  
    } else{
-    this.ipDomainInfoService.getIPDomainInfo(this.ipFormControl.value,this.serviceFormControl.value).subscribe(result => {
-      console.log(result)
+    this.ipDomainInfoService.getIPDomainInfo(this.ipFormControl.value,this.serviceFormControl.value).subscribe(results => {
+      Object.values(results).forEach(result => {
+        tempInfoArray.push(result);
+      });
+      this.hostOrAddressInfo = tempInfoArray;
     });
    }
   }

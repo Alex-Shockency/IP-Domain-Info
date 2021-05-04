@@ -12,10 +12,10 @@ export class IpDomainInfoService {
 
   getIPDomainInfo(nameOrAddress: string, serviceList?:string[] ){
     let serviceUrl = "";
-    if(serviceList){
-      serviceUrl = "http://localhost:3000/api/IPDomainInfo/" + nameOrAddress +"?serviceList="+   serviceList.join(',');
+    if(serviceList && serviceList?.length !=0){
+      serviceUrl = "http://localhost:5101/api/IPDomainInfo/" + nameOrAddress +"?serviceList="+   serviceList.join(',');
     } else{
-      serviceUrl = "http://localhost:3000/api/IPDomainInfo/" + nameOrAddress +"?serviceList="+  "test,test";
+      serviceUrl = "http://localhost:5101/api/IPDomainInfo/" + nameOrAddress;
     }
    
     return this.http.get(encodeURI(serviceUrl));
