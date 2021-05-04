@@ -28,6 +28,7 @@ export class AppComponent {
   selectedType = '';
 
   typeList: string[] = ['IP Address', 'Domain'];
+  serviceList: string[] = ['RDAP', 'GeoLocation', 'Ping', 'ReverseDns'];
 
   ipFormControl = new FormControl('', [
     Validators.required,
@@ -39,15 +40,17 @@ export class AppComponent {
     Validators.pattern(domainPattern),
   ]);
 
+  serviceFormControl = new FormControl(['RDAP', 'GeoLocation', 'Ping', 'ReverseDns']);
+
   matcher = new MyErrorStateMatcher();
 
   submit(){
    if(this.selectedType === 'Domain'){
-    this.ipDomainInfoService.getIPDomainInfo(this.domainFormControl.value).subscribe(result => {
+    this.ipDomainInfoService.getIPDomainInfo(this.domainFormControl.value, this.serviceFormControl.value).subscribe(result => {
       console.log(result)
     });
    } else{
-    this.ipDomainInfoService.getIPDomainInfo(this.ipFormControl.value).subscribe(result => {
+    this.ipDomainInfoService.getIPDomainInfo(this.ipFormControl.value,this.serviceFormControl.value).subscribe(result => {
       console.log(result)
     });
    }

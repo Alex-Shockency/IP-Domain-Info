@@ -5,6 +5,19 @@
 <mat-card class="card-margin">
   <form class="example-form">
     <mat-form-field appearance="fill">
+      <mat-label>Services</mat-label>
+      <mat-select [formControl]="serviceFormControl" multiple>
+        <mat-select-trigger>
+          {{serviceFormControl.value ? serviceFormControl.value[0] : ''}}
+          <span *ngIf="serviceFormControl.value?.length > 1" class="example-additional-selection">
+            (+{{serviceFormControl.value.length - 1}} {{serviceFormControl.value?.length === 2 ? 'other' : 'others'}})
+          </span>
+        </mat-select-trigger>
+        <mat-option *ngFor="let service of serviceList" [value]="service">{{service}}</mat-option>
+      </mat-select>
+    </mat-form-field>
+    <br>
+    <mat-form-field appearance="fill">
       <mat-label>IP or Domain</mat-label>
       <mat-select [(ngModel)]="selectedType" name="type">
         <mat-option *ngFor="let type of typeList" [value]="type">
@@ -34,9 +47,10 @@
         Ip address <strong>required</strong>
       </mat-error>
     </mat-form-field>
-    
+
   </form>
   <mat-card-actions align="end">
-    <button [disabled]="!ipFormControl.valid && !domainFormControl.valid" mat-raised-button color="primary" type="submit" (click)="submit()">Submit</button>
+    <button [disabled]="!ipFormControl.valid && !domainFormControl.valid" mat-raised-button color="primary"
+      type="submit" (click)="submit()">Submit</button>
   </mat-card-actions>
 </mat-card>
