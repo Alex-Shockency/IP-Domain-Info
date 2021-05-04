@@ -38,7 +38,7 @@ namespace IP_Domain_API.Controllers
             }
             Task<string>[] tasks = new Task<string>[4];
 
-            tasks[0] = RDAPAsync(nameOrAddress);
+            tasks[0] = RDAP(nameOrAddress);
             tasks[1] = GeoLocation(nameOrAddress);
             tasks[2] = Ping(nameOrAddress);
             tasks[3] = ReverseDns(nameOrAddress);
@@ -91,7 +91,7 @@ namespace IP_Domain_API.Controllers
             }
         }
 
-        private async Task<string> RDAPAsync(String nameOrAddress)
+        private async Task<string> RDAP(String nameOrAddress)
         {
             IPAddress tempForParsing;
             if (IPAddress.TryParse(nameOrAddress, out tempForParsing))

@@ -29,6 +29,16 @@ namespace IP_Domain_API
         {
             services.AddControllers();
             services.AddSwaggerGen();
+            services.AddCors(options =>
+           {
+               options.AddPolicy(name: "AllowAll",
+                               builder =>
+                               {
+                                   builder.AllowAnyOrigin()
+                                       .AllowAnyHeader()
+                                       .AllowAnyMethod();
+                               });
+           });
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
@@ -49,6 +59,8 @@ namespace IP_Domain_API
             app.UseHttpsRedirection();
 
             app.UseRouting();
+
+            app.UseCors("AllowAll");
 
             app.UseAuthorization();
 
