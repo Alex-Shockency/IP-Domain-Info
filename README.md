@@ -1,7 +1,7 @@
 # IP-Domain-Info
 
 Running the application <br>
-Requirements: Docker
+Requirements: Docker <br>
 To run:
 
 <ul>
